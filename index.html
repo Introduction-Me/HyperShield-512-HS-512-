@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HyperShield-512 Hasher</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --input-bg: #334155;
+            --border: #475569;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .app-container {
+            background-color: var(--card-bg);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 450px;
+            border: 1px solid var(--border);
+        }
+
+        h2 {
+            text-align: center;
+            color: var(--accent);
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.2s;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        textarea {
+            height: 90px;
+            resize: none;
+        }
+
+        .salt-wrapper {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-rnd {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--accent);
+            border-radius: 8px;
+            padding: 0 12px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: background 0.2s;
+        }
+
+        .btn-main:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .result-box {
+            margin-top: 20px;
+            background-color: #0b0f19;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px dashed var(--accent);
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 13px;
+            cursor: pointer;
+            position: relative;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .result-box:active {
+            background-color: #1e293b;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background-color: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+            opacity: 0;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <h2>HyperShield-512</h2>
+    <div class="subtitle">One-Way Non-Destructible Cryptographic Hasher</div>
+    
+    <div class="input-group">
+        <label for="inputText">Input Message / Password:</label>
+        <textarea id="inputText" placeholder="Enter text to hash..."></textarea>
+    </div>
+    
+    <div class="input-group">
+        <label for="saltInput">Custom Salt:</label>
+        <div class="salt-wrapper">
+            <input type="text" id="saltInput" placeholder="Optional string salt">
+            <button class="btn-rnd" onclick="generateRandomSalt()" title="Generate Random Salt">🎲</button>
+        </div>
+    </div>
+    
+    <button class="btn-main" onclick="generateHyperHash()">Generate Hash</button>
+    
+    <label style="margin-top: 20px;">Output (Click to Copy):</label>
+    <div id="outputHash" class="result-box" onclick="copyToClipboard()">The secure hash will appear here...</div>
+</div>
+
+<div id="toast" class="toast">Copied to clipboard!</div>
+
+<script>
+const SECRET_PEPPER = "Quantum_Immunity_2026_Standard_HS512_Protocol!!!";
+
+function generateRandomSalt() {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let salt = '';
+    for (let i = 0; i < 12; i++) {
+        salt += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('saltInput').value = salt;
+}
+
+async function generateHyperHash() {
+    const text = document.getElementById('inputText').value;
+    const salt = document.getElementById('saltInput').value;
+    
+    if (!text) {
+        showToast("Error: Please enter input text!", "#ef4444");
+        return;
+    }
+
+    const combinedData = text + salt + SECRET_PEPPER;
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(combinedData);
+    
+    // First pass SHA-512
+    const hashBuffer1 = await crypto.subtle.digest('SHA-512', dataBuffer);
+    
+    // Inverted Cascade
+    const invertedArray = new Uint8Array(hashBuffer1).reverse();
+    
+    // Second pass SHA-512
+    const finalHashBuffer = await crypto.subtle.digest('SHA-512', invertedArray);
+    
+    // Convert to Hex
+    const hashArray = Array.from(new Uint8Array(finalHashBuffer));
+    const finalHashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    document.getElementById('outputHash').innerHTML = `<strong>HS-512:$</strong>${finalHashHex}`;
+}
+
+function copyToClipboard() {
+    const hashText = document.getElementById('outputHash').innerText;
+    if (hashText.includes('...') || hashText.includes('Error')) return;
+    
+    const cleanHash = hashText.replace('HS-512:$', '');
+    
+    navigator.clipboard.writeText(cleanHash).then(() => {
+        showToast("Hash copied to clipboard!", "#10b981");
+    }).catch(() => {
+        showToast("Failed to copy", "#ef4444");
+    });
+}
+
+function showToast(message, bgColor) {
+    const toast = document.getElementById('toast');
+    toast.innerText = message;
+    toast.style.backgroundColor = bgColor;
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2000);
+}
+</script>
+
+</body>
+</html>
